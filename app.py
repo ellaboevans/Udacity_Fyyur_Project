@@ -31,7 +31,7 @@ migrate = Migrate(app, db)
 #----------------------------------------------------------------------------#
 
 class Genre(db.Model):
-  __table__ = 'Genre'
+  __tablename__ = 'Genre'
   id = db.Column(db.Integer, primary_key=True)
   name = db.Column(db.String)
 
