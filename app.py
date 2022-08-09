@@ -450,33 +450,36 @@ def create_venue_submission():
         # Insert form data into DB
     try:
             # creates the new venue with all fields but not genre yet
-            new_venue=Venue(name=name, city=city, state=state, address=address, phone=phone,
-                              seeking_talent=seeking_talent, seeking_description=seeking_description, image_link=image_link,
-                              website=website, facebook_link=facebook_link)
+            new_venue=Venue(name=name, city=city, 
+                            state=state, address=address, 
+                            phone=phone, seeking_talent=seeking_talent, 
+                            seeking_description=seeking_description, image_link=image_link,
+                            website=website, facebook_link=facebook_link)
+                              
 
             # genres can't take a list of strings, it needs to be assigned to db objects
             # genres from the form is like: ['Alternative', 'Classical', 'Country']
-            for genre in genres:
+            #for genre in genres:
                
-                fetch_genre=Genre.query.filter_by(name=genre).one_or_none()
-                if fetch_genre:
+                #fetch_genre=Genre.query.filter_by(name=genre).one_or_none()
+                #if fetch_genre:
                     # if found a genre, append it to the list
-                    new_venue.genres.append(fetch_genre)
+                    #new_venue.genres.append(fetch_genre)
 
-                else:
+                #else:
                     # fetch_genre was None. It's not created yet, so create it
-                    new_genre=Genre(name=genre)
-                    db.session.add(new_genre)
+                    #new_genre=Genre(name=genre)
+                    #db.session.add(new_genre)
                     # Create a new Genre item and append it
-                    new_venue.genres.append(new_genre)
+                    #(new_genre)
 
             db.session.add(new_venue)
             db.session.commit()
-            flash('Venue ' + request.form['name'] +
+            flash('Venue ' + request.form.get('name') +
                   ' was successfully listed!')
     except:
             db.session.rollback()
-            flash('An error occurred. Venue ' + \
+            flash('An error occurred. Venue ' + 
                   new_venue.name + ' could not be listed.')
     finally:
             db.session.close()
