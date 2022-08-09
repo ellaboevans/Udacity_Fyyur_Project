@@ -414,7 +414,7 @@ def show_venue(venue_id):
 #  ----------------------------------------------------------------
 
 
-@ app.route('/venues/create', methods=['POST'])
+@ app.route('/venues/create', methods=['GET'])
 def create_venue_form():
     form=VenueForm()
     return render_template('forms/new_venue.html', form=form)
@@ -450,11 +450,11 @@ def create_venue_submission():
             new_venue=Venue(name=name, city=city, state=state, address=address, phone=phone,
                               seeking_talent=seeking_talent, seeking_description=seeking_description, image_link=image_link,
                               website=website, facebook_link=facebook_link)
+                              
             # genres can't take a list of strings, it needs to be assigned to db objects
             # genres from the form is like: ['Alternative', 'Classical', 'Country']
             for genre in genres:
-                # fetch_genre = session.query(Genre).filter_by(name=genre).one_or_none()  # Throws an exception if more than one returned, returns None if none
-                # Throws an exception if more than one returned, returns None if none
+               
                 fetch_genre=Genre.query.filter_by(name=genre).one_or_none()
                 if fetch_genre:
                     # if found a genre, append it to the list
