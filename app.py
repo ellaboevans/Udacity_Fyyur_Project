@@ -2,6 +2,7 @@
 # Imports
 #----------------------------------------------------------------------------#
 
+
 import json
 import dis
 import dateutil.parser
@@ -14,7 +15,7 @@ from logging import Formatter, FileHandler
 from sqlalchemy import ARRAY, String
 from forms import *
 from flask_migrate import Migrate
-
+import os
 from datetime import datetime
 import re
 from operator import itemgetter  # for sorting lists of tuples
@@ -107,7 +108,7 @@ class Artist(db.Model):
     shows=db.relationship('Show', backref='artist_list', lazy=True)
 
     def __repr__(self):
-        return f'<Artist {self.id} {self.name}>'
+        return f'<Artist: {self.id} {self.name}>'
 
 
 class Show(db.Model):
@@ -119,10 +120,9 @@ class Show(db.Model):
     artist_id=db.Column(db.Integer, db.ForeignKey(
         'artists.id'), nullable=False)
     venue_id=db.Column(db.Integer, db.ForeignKey(
-        'venues.id'), nullable=False)
-
+        'venues.id'), nullable = False)
     def __repr__(self):
-        return f'<Show {self.id} {self.start_time} artist_id={artist_id} venue_id={venue_id}>'
+        return f'<Show: {self.id} {self.start_time}>'
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
@@ -163,10 +163,11 @@ def venues():
     # Create a set of all the cities/states combinations uniquely
     cities_states=set()
     for venue in venues:
-        cities_states.add((venue.city, venue.state))  # Add tuple
+        cities_states.add((venue.city, venue.state))  
 
     # Turn the set into an ordered list
     cities_states=list(cities_states)
+
     # Sorts on second column first (state), then by city.
     cities_states.sort(key=itemgetter(1, 0))
 
@@ -233,7 +234,7 @@ def search_venues():
     # Wildcards search before and after
     venues=Venue.query.filter(
         Venue.name.ilike('%' + search_term + '%')).all()
-    # print(venues)
+    print(venues)
     venue_list=[]
     now=datetime.now()
     for venue in venues:
@@ -413,7 +414,7 @@ def show_venue(venue_id):
 #  ----------------------------------------------------------------
 
 
-@ app.route('/venues/create', methods=['GET'])
+@ app.route('/venues/create', methods=['POST'])
 def create_venue_form():
     form=VenueForm()
     return render_template('forms/new_venue.html', form=form)
@@ -428,7 +429,7 @@ def create_venue_submission():
     state=request.form.get('state')
     address=request.form.get('address')
     phone=request.form.get('phone')
-    genres=",".join(request.form.get('genres'))
+    genres= request.form.get('genres')
     seeking_talent=request.form.get('seeking_talent')
     seeking_description=request.form.get('seeking_description')
     image_link=request.form.get('image_link')
@@ -437,14 +438,14 @@ def create_venue_submission():
 
     # Redirect back to form if errors in form validation
     if not form.validate():
-        flash(form.errors)
+       #flash(form.errors)
         return redirect(url_for('create_venue_submission'))
 
     else:
         error_in_insert=False
 
         # Insert form data into DB
-        try:
+    try:
             # creates the new venue with all fields but not genre yet
             new_venue=Venue(name=name, city=city, state=state, address=address, phone=phone,
                               seeking_talent=seeking_talent, seeking_description=seeking_description, image_link=image_link,
@@ -470,11 +471,11 @@ def create_venue_submission():
             db.session.commit()
             flash('Venue ' + request.form['name'] +
                   ' was successfully listed!')
-        except:
+    except:
             db.session.rollback()
             flash('An error occurred. Venue ' + \
                   new_venue.name + ' could not be listed.')
-        finally:
+    finally:
             db.session.close()
 
 
@@ -503,12 +504,12 @@ def delete_venue(venue_id):
             print("Error in delete_venue()")
             abort(500)
         else:
-            # flash(f'Successfully removed venue {venue_name}')
-            # return redirect(url_for('venues'))
-            return jsonify({
-                'deleted': True,
-                'url': url_for('venues')
-            })
+             flash(f'Successfully removed venue {venue_name}')
+             return redirect(url_for('venues'))
+             #return jsonify({
+             #  'deleted': True,
+             #   'url': url_for('venues')
+            #})
 
 
 #  Artists
@@ -1008,30 +1009,24 @@ def create_artist_form():
 @ app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
 
-    # called upon submitting the new artist listing form
 
-    # TODO: insert form data as a new Venue record in the db, instead
-    # Much of this code is similar to create_venue view
     form=ArtistForm()
 
-    name=form.name.data.strip()
-    city=form.city.data.strip()
-    state=form.state.data
-    # address = form.address.data.strip()
-    phone=form.phone.data
-    # Normalize DB.  Strip anything from phone that isn't a number
-    phone=re.sub('\D', '', phone)  # e.g. (819) 392-1234 --> 8193921234
-    # ['Alternative', 'Classical', 'Country']
-    genres=form.genres.data
-    seeking_venue=True if form.seeking_venue.data == 'Yes' else False
-    seeking_description=form.seeking_description.data.strip()
-    image_link=form.image_link.data.strip()
-    website=form.website.data.strip()
-    facebook_link=form.facebook_link.data.strip()
+    name=request.form.get('name')
+    city=request.form.get('city')
+    state=request.form.get('city')
+    address = request.form.get('address')
+    phone=request.form.get('phone')
+    genres=request.form.get('genres')
+    seeking_venue= request.form.get('seeking_venue') 
+    seeking_description=request.form.get('seeking_description')
+    image_link=request.form.get('image_link')
+    website=request.form.get('website')
+    facebook_link=request.form.get('facebook_link')
 
     # Redirect back to form if errors in form validation
     if not form.validate():
-        flash(form.errors)
+    #   flash(form.errors)
         return redirect(url_for('create_artist_submission'))
 
     else:
@@ -1105,9 +1100,9 @@ def delete_artist(artist_id):
             print("Error in delete_artist()")
             abort(500)
         else:
-            # flash(f'Successfully removed artist {artist_name}')
-            # return redirect(url_for('artists'))
-            return jsonify({
+             flash(f'Successfully removed artist {artist_name}')
+             return redirect(url_for('artists'))
+             return jsonify({
                 'deleted': True,
                 'url': url_for('artists')
             })
@@ -1119,7 +1114,6 @@ def delete_artist(artist_id):
 @ app.route('/shows')
 def shows():
     # displays list of shows at /shows
-
     data=[]
     shows=Show.query.all()
 
@@ -1187,27 +1181,30 @@ def create_show_submission():
 
     form=ShowForm()
 
-    artist_id=form.artist_id.data.strip()
-    venue_id=form.venue_id.data.strip()
-    start_time=form.start_time.data
+    artist_id=request.form.get('artist_id')
+    venue_id=request.form.get('venue_id')
+    start_time=request.form.get('start_time')
 
     error_in_insert=False
 
     try:
-        new_show=Show(start_time=start_time,
-                        artist_id=artist_id, venue_id=venue_id)
+        new_show=Show (start_time=start_time, artist_id=artist_id, venue_id=venue_id)
         db.session.add(new_show)
         db.session.commit()
     except:
         error_in_insert=True
-        print(f'Excepttion "{e}" in create_show_submission()')
+        print(f'Exception " " in create_show_submission()')
         db.session.rollback()
+
     finally:
         db.session.close()
+
     if error_in_insert:
+
         flash(f'An error occured. Show could not be listed.')
         print("Error in create_show_submission")
     else:
+
         flash('Show was successfully listed!')
 
     return render_template('pages/home.html')
@@ -1226,8 +1223,7 @@ def server_error(error):
 if not app.debug:
     file_handler=FileHandler('error.log')
     file_handler.setFormatter(
-        Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
+        Formatter( '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]')
     )
     app.logger.setLevel(logging.INFO)
     file_handler.setLevel(logging.INFO)
@@ -1243,8 +1239,8 @@ if __name__ == '__main__':
     app.run()
 
 # Or specify port manually:
-'''
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-'''
+
