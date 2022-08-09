@@ -57,7 +57,10 @@ class Genre(db.Model):
                               db.Column('venues_id', db.Integer, db.ForeignKey(
                                   'venues.id'), primary_key=True)
                              )
-
+def __init__(self, name, artists_genre_table, venue_genre_table):
+    self.name = name
+    self.artists_genre_table = artists_genre_table
+    self.venue_genre_table = venue_genre_table
 
 class Venue(db.Model):
     __tablename__='venues'
@@ -450,7 +453,7 @@ def create_venue_submission():
             new_venue=Venue(name=name, city=city, state=state, address=address, phone=phone,
                               seeking_talent=seeking_talent, seeking_description=seeking_description, image_link=image_link,
                               website=website, facebook_link=facebook_link)
-                              
+
             # genres can't take a list of strings, it needs to be assigned to db objects
             # genres from the form is like: ['Alternative', 'Classical', 'Country']
             for genre in genres:
@@ -518,7 +521,7 @@ def delete_venue(venue_id):
 
 @ app.route('/artists')
 def artists():
-    artists=Artist.query.order_by(Artist.name).all()  # Sort alphabetically
+    artists=Artist.query.order_by(Artist.name).all()  
 
     data=[]
     for artist in artists:
