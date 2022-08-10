@@ -16,6 +16,7 @@ from sqlalchemy import ARRAY, String
 from forms import *
 from flask_migrate import Migrate
 import os
+import sys
 from datetime import datetime
 import re
 from operator import itemgetter  # for sorting lists of tuples
@@ -229,6 +230,7 @@ def venues():
 
 @ app.route('/venues/search', methods=['POST'])
 def search_venues():
+
     # TODO: implement search on venues with partial string search. Ensure it is case-insensitive.
     search_term=request.form.get('search_term', '').strip()
 
@@ -446,7 +448,7 @@ def create_venue_submission():
                 address =form.address.data,
                 phone =form.phone.data,
                 image_link =form.image_link.data,
-                genres =form.genres.data,
+                genres =" ".join(form.genres.data),
                 facebook_link =form.facebook_link.data,
                 website_link =form.website_link.data,
                 seeking_talent =form.seeking_talent.data,
@@ -457,19 +459,24 @@ def create_venue_submission():
             # now we have to save in to the database
             # we call on db object to create the connection
             db.session.add(venues)
+            db.session.commit()
         else:
             error = True
 
     except Exception as e:
         print(str(e))
         # we then have to rollback the change when encounter issue
+        print(sys.exc_info())
         db.session.rollback()
+
     finally:
         # finally we have to close the transaction
+
         db.session.close()
     
     if not error:
         # on successful db insert, flash success
+        
         flash('Venue ' + request.form['name'] + ' was successfully listed!')
     else:
         # TODO: on unsuccessful db insert, flash an error instead.
@@ -917,20 +924,17 @@ def edit_venue_submission(venue_id):
     # Much of this code same as /venue/create view.
     form=VenueForm()
 
-    name=form.name.data.strip()
-    city=form.city.data.strip()
+    name=form.name.data,
+    city=form.city.data,
     state=form.state.data
-    address=form.address.data.strip()
-    phone=form.phone.data
-    # Normalize DB.  Strip anything from phone that isn't a number
-    phone=re.sub('\D', '', phone)  # e.g. (819) 392-1234 --> 8193921234
-    # ['Alternative', 'Classical', 'Country']
-    genres=form.genres.data
-    seeking_talent=True if form.seeking_talent.data == 'Yes' else False
-    seeking_description=form.seeking_description.data.strip()
-    image_link=form.image_link.data.strip()
-    website=form.website.data.strip()
-    facebook_link=form.facebook_link.data.strip()
+    address=form.address.data,
+    phone=form.phone.data,
+    genres=form.genres.data,
+    seeking_talent=form.seeking_talent.data,
+    seeking_description=form.seeking_description.data,
+    image_link=form.image_link.data,
+    website=form.website_link.data,
+    facebook_link=form.facebook_link.data
 
     # Redirect back to form if errors in form validation
     if not form.validate():
@@ -1049,6 +1053,7 @@ def create_artist_submission():
             # now we have to save in to the database
             # we call on db object to create the connection
             db.session.add(artists)
+            db.session.commit()
         else:
             error = True
 
@@ -1164,7 +1169,8 @@ def shows():
 
 @ app.route('/shows/create')
 def create_shows():
-    # renders form. do not touch.
+    # renders form. do not touch
+
     form=ShowForm()
     return render_template('forms/new_show.html', form=form)
 
@@ -1185,9 +1191,10 @@ def create_show_submission():
         new_show=Show (start_time=start_time, artist_id=artist_id, venue_id=venue_id)
         db.session.add(new_show)
         db.session.commit()
-    except:
+
+    except Exception as e:
         error_in_insert=True
-        print(f'Exception " " in create_show_submission()')
+        print(f'Exception "{e} " in create_show_submission()')
         db.session.rollback()
 
     finally:
