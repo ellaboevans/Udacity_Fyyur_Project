@@ -57,10 +57,10 @@ class Genre(db.Model):
                               db.Column('venues_id', db.Integer, db.ForeignKey(
                                   'venues.id'), primary_key=True)
                              )
-def __init__(self, name, artists_genre_table, venue_genre_table):
-    self.name = name
-    self.artists_genre_table = artists_genre_table
-    self.venue_genre_table = venue_genre_table
+#def __init__(self, name, artists_genre_table, venue_genre_table):
+#    self.name = name
+#    self.artists_genre_table = artists_genre_table
+#    self.venue_genre_table = venue_genre_table
 
 class Venue(db.Model):
     __tablename__='venues'
@@ -72,13 +72,13 @@ class Venue(db.Model):
     address=db.Column(db.String(120))
     phone=db.Column(db.String(120))
     image_link=db.Column(db.String(500))
-    facebook_link=db.Column(db.String(120))
+    facebook_link=db.Column(db.String(120))#
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
 
     genres=db.Column(ARRAY(String))
 
-    website=db.Column(db.String(120))
+    website_link=db.Column(db.String(120))
     seeking_talent=db.Column(db.Boolean, default=False)
     seeking_description=db.Column(db.String(120))
 
@@ -104,7 +104,7 @@ class Artist(db.Model):
 
     genres=db.Column(ARRAY(String))
 
-    website=db.Column(db.String(120))
+    website_link=db.Column(db.String(120))
     seeking_venue=db.Column(db.Boolean, default=False)
     seeking_description=db.Column(db.String(120))
 
@@ -161,20 +161,19 @@ def venues():
 
     venues=Venue.query.all()
 
-    data=[]   # A list of dictionaries, where city, state, and venues are dictionary keys
-
-    # Create a set of all the cities/states combinations uniquely
+    data=[]   
+    
     cities_states=set()
     for venue in venues:
         cities_states.add((venue.city, venue.state))  
 
-    # Turn the set into an ordered list
+    
     cities_states=list(cities_states)
 
-    # Sorts on second column first (state), then by city.
+   
     cities_states.sort(key=itemgetter(1, 0))
 
-    now=datetime.now()    # Don't get this over and over in a loop!
+    now=datetime.now()    
 
     # Now iterate over the unique values to seed the data dictionary with city/state locations
     for loc in cities_states:
@@ -425,64 +424,67 @@ def create_venue_form():
 
 @ app.route('/venues/create', methods=['POST'])
 def create_venue_submission():
-    form=VenueForm()
+    error = False
 
-    name=request.form.get('name')
-    city=request.form.get('city')
-    state=request.form.get('state')
-    address=request.form.get('address')
-    phone=request.form.get('phone')
-    genres= request.form.get('genres')
-    seeking_talent=request.form.get('seeking_talent')
-    seeking_description=request.form.get('seeking_description')
-    image_link=request.form.get('image_link')
-    website=request.form.get('website')
-    facebook_link=request.form.get('facebook_link')
+    # we have to pass request.form to VenueForm
+    # venueform help to validate the data sent
+    # to the controller
+    form=VenueForm(request.form)
 
-    # Redirect back to form if errors in form validation
-    if not form.validate():
-       #flash(form.errors)
-        return redirect(url_for('create_venue_submission'))
-
-    else:
-        error_in_insert=False
-
-        # Insert form data into DB
     try:
-            # creates the new venue with all fields but not genre yet
-            new_venue=Venue(name=name, city=city, 
-                            state=state, address=address, 
-                            phone=phone, seeking_talent=seeking_talent, 
-                            seeking_description=seeking_description, image_link=image_link,
-                            website=website, facebook_link=facebook_link)
-                              
+        # next we have to check if the data is valid
+        if form.validate():
+            # if true then we create venue
+            # next we hvae to access the data from the form
 
-            # genres can't take a list of strings, it needs to be assigned to db objects
-            # genres from the form is like: ['Alternative', 'Classical', 'Country']
-            #for genre in genres:
-               
-                #fetch_genre=Genre.query.filter_by(name=genre).one_or_none()
-                #if fetch_genre:
-                    # if found a genre, append it to the list
-                    #new_venue.genres.append(fetch_genre)
+            # go ahead and change the
+            # continue it ok sure
+            venues = Venue(
+                name =form.name.data,
+                city =form.city.data,
+                state =form.state.data,
+                address =form.address.data,
+                phone =form.phone.data,
+                image_link =form.image_link.data,
+                genres =form.genres.data,
+                facebook_link =form.facebook_link.data,
+                website_link =form.website_link.data,
+                seeking_talent =form.seeking_talent.data,
+                seeking_description =form.seeking_description.data
+                
+            )
 
-                #else:
-                    # fetch_genre was None. It's not created yet, so create it
-                    #new_genre=Genre(name=genre)
-                    #db.session.add(new_genre)
-                    # Create a new Genre item and append it
-                    #(new_genre)
+            # now we have to save in to the database
+            # we call on db object to create the connection
+            db.session.add(venues)
+        else:
+            error = True
 
-            db.session.add(new_venue)
-            db.session.commit()
-            flash('Venue ' + request.form.get('name') +
-                  ' was successfully listed!')
-    except:
-            db.session.rollback()
-            flash('An error occurred. Venue ' + 
-                  new_venue.name + ' could not be listed.')
+    except Exception as e:
+        print(str(e))
+        # we then have to rollback the change when encounter issue
+        db.session.rollback()
     finally:
-            db.session.close()
+        # finally we have to close the transaction
+        db.session.close()
+    
+    if not error:
+        # on successful db insert, flash success
+        flash('Venue ' + request.form['name'] + ' was successfully listed!')
+    else:
+        # TODO: on unsuccessful db insert, flash an error instead.
+        flash('An error occurred. Venue ' + request.form['name'] + ' could not be listed.')
+        # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+
+
+
+    return render_template('pages/home.html')
+
+
+
+
+
+
 
 
 @ app.route('/venues/<venue_id>/delete', methods=['GET'])
@@ -1015,72 +1017,58 @@ def create_artist_form():
 @ app.route('/artists/create', methods=['POST'])
 def create_artist_submission():
 
+    error = False
 
-    form=ArtistForm()
+    # we have to pass request.form to VenueForm
+    # artistform help to validate the data sent
+    # to the controller
+    form= ArtistForm(request.form)
 
-    name=request.form.get('name')
-    city=request.form.get('city')
-    state=request.form.get('city')
-    address = request.form.get('address')
-    phone=request.form.get('phone')
-    genres=request.form.get('genres')
-    seeking_venue= request.form.get('seeking_venue') 
-    seeking_description=request.form.get('seeking_description')
-    image_link=request.form.get('image_link')
-    website=request.form.get('website')
-    facebook_link=request.form.get('facebook_link')
+    try:
+        # next we have to check if the data is valid
+        if form.validate():
+            # if true then we create artists
+            # next we have to access the data from the form
 
-    # Redirect back to form if errors in form validation
-    if not form.validate():
-    #   flash(form.errors)
-        return redirect(url_for('create_artist_submission'))
+            # go ahead and change the
+            # continue it ok sure
+            artists = Artist(
+                name =form.name.data,
+                city =form.city.data,
+                state =form.state.data,
+                phone =form.phone.data,
+                image_link =form.image_link.data,
+                genres =form.genres.data,
+                facebook_link =form.facebook_link.data,
+                website_link =form.website_link.data,
+                seeking_venue =form.seeking_venue.data,
+                seeking_description =form.seeking_description.data
+                
+            )
 
-    else:
-        error_in_insert=False
-
-        # Insert form data into DB
-        try:
-            # creates the new artist with all fields but not genre yet
-            new_artist=Artist(name=name, city=city, state=state, phone=phone,
-                                seeking_venue=seeking_venue, seeking_description=seeking_description, image_link=image_link,
-                                website=website, facebook_link=facebook_link)
-            # genres can't take a list of strings, it needs to be assigned to db objects
-            # genres from the form is like: ['Alternative', 'Classical', 'Country']
-            for genre in genres:
-                # fetch_genre = session.query(Genre).filter_by(name=genre).one_or_none()  # Throws an exception if more than one returned, returns None if none
-                # Throws an exception if more than one returned, returns None if none
-                fetch_genre=Genre.query.filter_by(name=genre).one_or_none()
-                if fetch_genre:
-                    # if found a genre, append it to the list
-                    new_artist.genres.append(fetch_genre)
-
-                else:
-                    # fetch_genre was None. It's not created yet, so create it
-                    new_genre=Genre(name=genre)
-                    db.session.add(new_genre)
-                    # Create a new Genre item and append it
-                    new_artist.genres.append(new_genre)
-
-            db.session.add(new_artist)
-            db.session.commit()
-        except Exception as e:
-            error_in_insert=True
-            print(f'Exception "{e}" in create_artist_submission()')
-            db.session.rollback()
-        finally:
-            db.session.close()
-
-        if not error_in_insert:
-            # on successful db insert, flash success
-            flash('Artist ' + request.form['name'] +
-                  ' was successfully listed!')
-            return redirect(url_for('index'))
+            # now we have to save in to the database
+            # we call on db object to create the connection
+            db.session.add(artists)
         else:
-            flash('An error occurred. Artist ' +
-                  name + ' could not be listed.')
-            print("Error in create_artist_submission()")
-            abort(500)
+            error = True
 
+    except Exception as e:
+        print(str(e))
+        # we then have to rollback the change when encounter issue
+        db.session.rollback()
+    finally:
+        # finally we have to close the transaction
+        db.session.close()
+    
+    if not error:
+        # on successful db insert, flash success
+        flash('Artist ' + request.form['name'] + ' was successfully listed!')
+    else:
+        # TODO: on unsuccessful db insert, flash an error instead.
+        flash('An error occurred. Artist ' + request.form['name'] + ' could not be listed.')
+        # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+
+    return render_template('pages/home.html')
 
 @ app.route('/artists/<artist_id>/delete', methods=['GET'])
 def delete_artist(artist_id):
