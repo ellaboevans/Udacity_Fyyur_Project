@@ -612,7 +612,7 @@ def show_artist(artist_id):
 
         if requested_artist is None:
             return not_found_error(404)
-            # Figure out a better way to do this
+            
 
         genres = []
         for item in requested_artist.genres:
@@ -1096,7 +1096,9 @@ def create_artist_submission():
         flash('Artist ' + request.form['name'] + ' was successfully listed!')
     else:
         # TODO: on unsuccessful db insert, flash an error instead.
+
         flash('An error occurred. Artist ' + request.form['name'] + ' could not be listed.')
+        
         # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
 
     return render_template('pages/home.html')
