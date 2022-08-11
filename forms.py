@@ -90,6 +90,7 @@ class VenueForm(Form):
     )
     genres = SelectMultipleField(
         # TODO implement enum restriction
+        
         'genres', validators=[DataRequired()],
         choices=[
             ('Alternative', 'Alternative'),
