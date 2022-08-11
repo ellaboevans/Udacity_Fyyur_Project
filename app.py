@@ -274,64 +274,85 @@ def search_venues():
 
 @ app.route('/venues/<int:venue_id>')
 def show_venue(venue_id):
+
+    data= {}
     # shows the venue page with the given venue_id
 
     # Get all the data from the DB and populate the data dictionary (context)
     # venue = Venue.query.filter_by(id=venue_id).one_or_none()
     # Returns object by primary key, or None
-    venue=Venue.query.get(venue_id)
-    print(venue)
-    if not venue:
-        # Didn't return one, user must've hand-typed a link into the browser that doesn't exist
-        # Redirect home
-        return redirect(url_for('index'))
-    else:
-        # genres needs to be a list of genre strings for the template
-        genres=[genre.name for genre in venue.genres]
+    try:
 
-        # Get a list of shows, and count the ones in the past and future
-        past_shows=[]
-        past_shows_count=0
-        upcoming_shows=[]
-        upcoming_shows_count=0
-        now=datetime.now()
-        for show in venue.shows:
-            if show.start_time > now:
-                upcoming_shows_count += 1
-                upcoming_shows.append({
-                    "artist_id": show.artist_id,
-                    "artist_name": show.artist.name,
-                    "artist_image_link": show.artist.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
-            if show.start_time < now:
-                past_shows_count += 1
-                past_shows.append({
-                    "artist_id": show.artist_id,
-                    "artist_name": show.artist.name,
-                    "artist_image_link": show.artist.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
+        requested_venue = Venue.query.get(venue_id)
 
-        data={
-            "id": venue_id,
-            "name": venue.name,
-            "genres": genres,
-            "address": venue.address,
-            "city": venue.city,
-            "state": venue.state,
-            # Put the dashes back into phone number
-            "phone": (venue.phone[:3] + '-' + venue.phone[3:6] + '-' + venue.phone[6:]),
-            "website": venue.website,
-            "facebook_link": venue.facebook_link,
-            "seeking_talent": venue.seeking_talent,
-            "seeking_description": venue.seeking_description,
-            "image_link": venue.image_link,
+        if requested_venue is None:
+            return not_found_error(404)
+
+        genres = []
+        for item in requested_venue.genres:
+            genres.append(item.genre)
+        
+        shows = Show.query.filter_by(venue_id=venue_id)
+
+        today = datetime.datetime.now()
+
+        raw_past_shows = shows.filter(Show.start_time > today).all()
+        past_shows = []
+        
+        for show in raw_past_shows:
+            artists = Artist.query.get(show.artist_id)
+            show_data = {
+
+                "artist_id": artists.id,
+                "artist_name": artists.name,
+                "artist_image_link": artists.image_link,
+                "start_time": str(show.start_time),
+            }
+            past_shows.append(show_data)
+        
+        raw_upcoming_shows = shows.filter(Show.start_time >= today). all()
+        upcoming_shows = []
+        for show in raw_upcoming_shows:
+            artists = Artist.query.get(show.artist_id)
+            show_data = {
+
+                "artist_id": artists.id,
+                "artist_name": artists.name,
+                "artist_image_link": artists.image_link,
+                "start_time": str(show.start_time),
+            }
+            upcoming_shows.append(show_data)
+        
+        data = {
+            "id": requested_venue.id,
+            "name": requested_venue.name,
+            "genres": requested_venue.genres,
+            "address": requested_venue.address,
+            "city": requested_venue.city,
+            "state": requested_venue.state,
+            "phone": requested_venue.phone,
+            "website": requested_venue.website,
+            "facebook_link": requested_venue.facebook_link,
+            "seeking_talent": requested_venue.seeking_talent,
+            "image_link": requested_venue.image_link,
             "past_shows": past_shows,
-            "past_shows_count": past_shows_count,
             "upcoming_shows": upcoming_shows,
-            "upcoming_shows_count": upcoming_shows_count
+            "past_shows_count": len(past_shows),
+            "upcoming_shows_count": len(upcoming_shows),
         }
+
+    except:
+        print(sys.exc_info())
+        flash("Something went wrong. Please try again")
+    
+    finally:
+        db.session.close()
+    
+    return render_template('pages/show_venue.html', venue=data)
+
+    
+
+    
 
     # data1 = {
     #     "id": 1,
@@ -412,7 +433,7 @@ def show_venue(venue_id):
     # }
     # data = list(filter(lambda d: d['id'] ==
     #                    venue_id, [data1, data2, data3]))[0]
-    return render_template('pages/show_venue.html', venue=data)
+   
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -476,7 +497,7 @@ def create_venue_submission():
     
     if not error:
         # on successful db insert, flash success
-        
+
         flash('Venue ' + request.form['name'] + ' was successfully listed!')
     else:
         # TODO: on unsuccessful db insert, flash an error instead.
@@ -486,11 +507,6 @@ def create_venue_submission():
 
 
     return render_template('pages/home.html')
-
-
-
-
-
 
 
 
@@ -589,62 +605,72 @@ def search_artists():
 
 @ app.route('/artists/<int:artist_id>')
 def show_artist(artist_id):
-    # shows the artist page with the given artist_id
+    data = {}
 
-    # Returns object by primary key, or None
-    artist=Artist.query.get(artist_id)
-    print(artist)
-    if not artist:
-        # Didn't return one, user must've hand-typed a link into the browser that doesn't exist
-        # Redirect home
-        return redirect(url_for('index'))
-    else:
-        # genres needs to be a list of genre strings for the template
-        genres=[genre.name for genre in artist.genres]
+    try:
+        requested_artist = Artist.query.get(artist_id)
 
-        # Get a list of shows, and count the ones in the past and future
-        past_shows=[]
-        past_shows_count=0
-        upcoming_shows=[]
-        upcoming_shows_count=0
-        now=datetime.now()
-        for show in artist.shows:
-            if show.start_time > now:
-                upcoming_shows_count += 1
-                upcoming_shows.append({
-                    "venue_id": show.venue_id,
-                    "venue_name": show.venue.name,
-                    "venue_image_link": show.venue.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
-            if show.start_time < now:
-                past_shows_count += 1
-                past_shows.append({
-                    "venue_id": show.venue_id,
-                    "venue_name": show.venue.name,
-                    "venue_image_link": show.venue.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
+        if requested_artist is None:
+            return not_found_error(404)
+            # Figure out a better way to do this
 
-        data={
-            "id": artist_id,
-            "name": artist.name,
-            "genres": genres,
-            # "address": artist.address,
-            "city": artist.city,
-            "state": artist.state,
-            # Put the dashes back into phone number
-            "phone": (artist.phone[:3] + '-' + artist.phone[3:6] + '-' + artist.phone[6:]),
-            "website": artist.website,
-            "facebook_link": artist.facebook_link,
-            "seeking_venue": artist.seeking_venue,
-            "seeking_description": artist.seeking_description,
-            "image_link": artist.image_link,
+        genres = []
+        for item in requested_artist.genres:
+            genres.append(item.genre)
+
+        shows = Show.query.filter_by(artist_id=artist_id)
+
+        today = datetime.datetime.now()
+
+        raw_past_shows = shows.filter(Show.start_time < today).all()
+        past_shows = []
+        for show in raw_past_shows:
+            venue = Venue.query.get(show.venue_id)
+            show_data = {
+                "venue_id": venue.id,
+                "venue_name": venue.name,
+                "venue_image_link": venue.image_link,
+                "start_time": str(show.start_time),
+            }
+            past_shows.append(show_data)
+
+        raw_upcoming_shows = shows.filter(Show.start_time >= today).all()
+        upcoming_shows = []
+        for show in raw_upcoming_shows:
+            venue = Venue.query.get(show.venue_id)
+            show_data = {
+                "venue_id": venue.id,
+                "venue_name": venue.name,
+                "venue_image_link": venue.image_link,
+                "start_time": str(show.start_time),
+            }
+            upcoming_shows.append(show_data)
+
+        data = {
+            "id": requested_artist.id,
+            "name": requested_artist.name,
+            "genres": requested_artist.genres,
+            "city": requested_artist.city,
+            "state": requested_artist.state,
+            "phone": requested_artist.phone,
+            "seeking_venue": False,
+            "facebook_link": requested_artist.facebook_link,
+            "image_link": requested_artist.image_link,
             "past_shows": past_shows,
-            "past_shows_count": past_shows_count,
             "upcoming_shows": upcoming_shows,
-            "upcoming_shows_count": upcoming_shows_count
+            "past_shows_count": len(past_shows),
+            "upcoming_shows_count": len(upcoming_shows),
         }
+
+    except:
+        print(sys.exc_info())
+        flash("Something went wrong. Please try again.")
+
+    finally:
+        db.session.close()
+
+    return render_template("pages/show_artist.html", artist=data)
+
 
     # data1 = {
     #     "id": 4,
@@ -1042,7 +1068,7 @@ def create_artist_submission():
                 state =form.state.data,
                 phone =form.phone.data,
                 image_link =form.image_link.data,
-                genres =form.genres.data,
+                genres =" ".join(form.genres.data),
                 facebook_link =form.facebook_link.data,
                 website_link =form.website_link.data,
                 seeking_venue =form.seeking_venue.data,
@@ -1113,20 +1139,37 @@ def delete_artist(artist_id):
 @ app.route('/shows')
 def shows():
     # displays list of shows at /shows
+    
     data=[]
-    shows=Show.query.all()
+    
+    
+    try:
+        shows = Show.query.all()
+        for show in shows:
+            venue_id = show.venue_id
+            artist_id = show.artist_id
+            artist = Artist.query.get(artist_id)
 
-    for show in shows:
-        data.append({
+            each_show_data = {
+                "venue_id": venue_id,
+                "venue_name": Venue.query.get(venue_id).name,
+                "artist_id": artist_id,
+                "artist_name": artist.name,
+                "artist_image_link": artist.image_link,
+                "start_time": str(show.start_time),
+            }
 
-            "venue_id": show.venue.id,
-            "venue.name": show.venue.name,
-            "artist_id": show.artist.id,
-            "artist_name": show.artist.name,
-            "artist_image_link": show.artist.image_link,
-            "start_time": format_datetime(str(show.start.time))
+            data.append(each_show_data)
 
-        })
+    except:
+        db.session.rollback()
+        print(sys.exc_info())
+        flash("Something went wrong, please try again.")
+
+    finally:
+        db.session.close()
+    return render_template("pages/shows.html", shows=data)
+
      # data = [{
      #     "venue_id": 1,
      #     "venue_name": "The Musical Hop",
@@ -1164,10 +1207,10 @@ def shows():
      #     "artist_image_link": "https://images.unsplash.com/photo-1558369981-f9ca78462e61?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=794&q=80",
      #     "start_time": "2035-04-15T20:00:00.000Z"
      # }]
-    return render_template('pages/shows.html', shows=data)
+    
 
 
-@ app.route('/shows/create')
+@app.route('/shows/create')
 def create_shows():
     # renders form. do not touch
 
