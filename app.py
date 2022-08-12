@@ -20,9 +20,11 @@ import sys
 from datetime import datetime
 import re
 from operator import itemgetter  # for sorting lists of tuples
+import collections
 
 
 #
+collections.Callable = collections.abc.Callable
 # ----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -58,10 +60,10 @@ class Genre(db.Model):
                               db.Column('venues_id', db.Integer, db.ForeignKey(
                                   'venues.id'), primary_key=True)
                              )
-#def __init__(self, name, artists_genre_table, venue_genre_table):
-#    self.name = name
-#    self.artists_genre_table = artists_genre_table
-#    self.venue_genre_table = venue_genre_table
+def __repr__(self, name, artists_genre_table, venue_genre_table):
+    self.name = name
+    self.artists_genre_table = artists_genre_table
+    self.venue_genre_table = venue_genre_table
 
 class Venue(db.Model):
     __tablename__='venues'
@@ -300,12 +302,12 @@ def show_venue(venue_id):
         past_shows = []
         
         for show in raw_past_shows:
-            artists = Artist.query.get(show.artist_id)
+            artist = Artist.query.get(show.artist_id)
             show_data = {
 
-                "artist_id": artists.id,
-                "artist_name": artists.name,
-                "artist_image_link": artists.image_link,
+                "artist_id": artist.id,
+                "artist_name": artist.name,
+                "artist_image_link": artist.image_link,
                 "start_time": str(show.start_time),
             }
             past_shows.append(show_data)
@@ -313,12 +315,12 @@ def show_venue(venue_id):
         raw_upcoming_shows = shows.filter(Show.start_time >= today). all()
         upcoming_shows = []
         for show in raw_upcoming_shows:
-            artists = Artist.query.get(show.artist_id)
+            artist = Artist.query.get(show.artist_id)
             show_data = {
 
-                "artist_id": artists.id,
-                "artist_name": artists.name,
-                "artist_image_link": artists.image_link,
+                "artist_id": artist.id,
+                "artist_name": artist.name,
+                "artist_image_link": artist.image_link,
                 "start_time": str(show.start_time),
             }
             upcoming_shows.append(show_data)
@@ -1128,7 +1130,7 @@ def delete_artist(artist_id):
             abort(500)
         else:
              flash(f'Successfully removed artist {artist_name}')
-             return redirect(url_for('artists'))
+             #return redirect(url_for('artists'))
              return jsonify({
                 'deleted': True,
                 'url': url_for('artists')
@@ -1147,6 +1149,7 @@ def shows():
     
     try:
         shows = Show.query.all()
+        
         for show in shows:
             venue_id = show.venue_id
             artist_id = show.artist_id
@@ -1155,14 +1158,14 @@ def shows():
             each_show_data = {
                 "venue_id": venue_id,
                 "venue_name": Venue.query.get(venue_id).name,
-                "artist_id": artist_id,
+                "artist_id": Artist.query.get(artist_id).name,
                 "artist_name": artist.name,
                 "artist_image_link": artist.image_link,
                 "start_time": str(show.start_time),
             }
 
             data.append(each_show_data)
-
+        
     except:
         db.session.rollback()
         print(sys.exc_info())
