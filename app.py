@@ -784,96 +784,34 @@ def edit_venue(venue_id):
 
 @ app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
-    # Much of this code same as /venue/create view.
-
-    form = VenueForm(request.form)
-
-    name = form.name.data,
-    city = form.city.data,
-    state = form.state.data
-    address = form.address.data,
-    phone = form.phone.data,
-    genres =form.genres.data,
-    seeking_talent = form.seeking_talent.data,
-    seeking_description = form.seeking_description.data,
-    image_link = form.image_link.data,
-    website = form.website_link.data,
-    facebook_link = form.facebook_link.data
-
-    # Redirect back to form if errors in form validation
-    if not form.validate():
-        # flash(form.errors)
-        return redirect(url_for('edit_venue_submission', venue_id=venue_id))
-
-    else:
-        error_in_update = False
-
-        # Insert form data into DB
-        try:
-            # First get the existing venue object
-            venue = Venue.query.get(venue_id)
-            # venue = Venue.query.filter_by(id=venue_id).one_or_none()
-
-            # Update fields
-            venue.name = name
-            venue.city = city
-            venue.state = state
-            venue.address = address
-            venue.phone = phone
-
-            venue.seeking_talent = seeking_talent
-            venue.seeking_description = seeking_description
-            venue.image_link = image_link
-            venue.website = website
-            venue.facebook_link = facebook_link
-
-            # First we need to clear (delete) all the existing genres off the venue otherwise it just adds them
-
-            # For some reason this didn't work! Probably has to do with flushing/lazy, etc.
-            # for genre in venue.genres:
-            #     venue.genres.remove(genre)
-
-            # venue.genres.clear()  # Either of these work.
-            venue.genres = []
-
-            # genres can't take a list of strings, it needs to be assigned to db objects
-            # genres from the form is like: ['Alternative', 'Classical', 'Country']
-            for genre in genres:
-                # Throws an exception if more than one returned, returns None if none
-                fetch_genre = Genre.query.filter_by(name=genre).one_or_none()
-                if fetch_genre:
-                    # if found a genre, append it to the list
-                    venue.genre.append(fetch_genre)
-
-                else:
-                    # fetch_genre was None. It's not created yet, so create it
-                    new_genre = Genre(name=genre)
-                    db.session.add(new_genre)
-                    # Create a new Genre item and append it
-                    venue.genre.append(new_genre)
-
-            # Attempt to save everything
-                    db.session.commit()
-                    db.session.no_autoflush()
-        except Exception as e:
-            error_in_update = True
-            print(f'Exception "{e}" in edit_venue_submission()')
-            db.session.rollback()
-            print(sys.exc_info())
-        finally:
-            db.session.close()
-
-        if not error_in_update:
-            # on successful db update, flash success
-            flash('Venue ' + request.form['name'] +
-                  ' was successfully updated!')
-            return redirect(url_for('show_venue', venue_id=venue_id))
-        else:
-            flash('An error occurred. Venue ' +
-                  request.form.get("name") + ' could not be updated.')
-
-            print("Error in edit_venue_submission()")
-            abort(500)
+  # TODO: take values from the form submitted, and update existing
+  # venue record with ID <venue_id> using the new attributes
+  form = VenueForm(request.form)
+  venue_data = Venue.query.get(venue_id)
+  if venue_data:
+      if form.validate():
+          seeking_talent = False
+          seeking_description = ''
+          if 'seeking_talent' in request.form:
+              seeking_talent = request.form['seeking_talent'] == 'y'
+          if 'seeking_description' in request.form:
+              seeking_description = request.form['seeking_description']
+          setattr(venue_data, 'name', request.form['name'])
+          setattr(venue_data, 'genres', request.form.getlist('genres'))
+          setattr(venue_data, 'address', request.form['address'])
+          setattr(venue_data, 'city', request.form['city'])
+          setattr(venue_data, 'state', request.form['state'])
+          setattr(venue_data, 'phone', request.form['phone'])
+        # setattr(venue_data, 'website', request.form['website'])
+          setattr(venue_data, 'facebook_link', request.form['facebook_link'])
+          setattr(venue_data, 'image_link', request.form['image_link'])
+          setattr(venue_data, 'seeking_description', seeking_description)
+          setattr(venue_data, 'seeking_talent', seeking_talent)
+         # Venue.update(venue_data)
+          return redirect(url_for('show_venue', venue_id=venue_id))
+      else:
+          print(form.errors)
+  return render_template('errors/404.html'), 404
 
 #  Create Artist
 #  ----------------------------------------------------------------
