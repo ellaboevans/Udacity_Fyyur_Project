@@ -21,8 +21,6 @@ import collections
 from models import db_setup, Venue, Show, Artist
 
 
-
-
 #
 collections.Callable = collections.abc.Callable
 # ----------------------------------------------------------------------------#
@@ -35,11 +33,9 @@ moment = Moment(app)
 db = db_setup(app)
 
 
-
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
-
 
 
 #----------------------------------------------------------------------------#
@@ -209,7 +205,8 @@ def show_venue(venue_id):
 
         today = datetime.now()
 
-        raw_past_shows = shows.filter(Show.start_time > today).all()
+        raw_past_shows = db.session.query(Show).join(Venue).filter(
+            Show.venue_id == venue_id).filter(Show.start_time > datetime.now()).all()
         past_shows = []
 
         for show in raw_past_shows:
@@ -223,7 +220,8 @@ def show_venue(venue_id):
             }
             past_shows.append(show_data)
 
-        raw_upcoming_shows = shows.filter(Show.start_time >= today). all()
+        raw_upcoming_shows = db.session.query(Show).join(Venue).filter(
+            Show.venue_id == venue_id).filter(Show.start_time > datetime.now()).all()
         upcoming_shows = []
         for show in raw_upcoming_shows:
             artist = Artist.query.get(show.artist_id)
@@ -526,7 +524,8 @@ def show_artist(artist_id):
 
         today = datetime.now()
 
-        raw_past_shows = shows.filter(Show.start_time < today).all()
+        raw_past_shows = db.session.query(Show).join(Venue).filter(
+            Show.artist_id == artist_id).filter(Show.start_time < datetime.now()).all()
         past_shows = []
         for show in raw_past_shows:
             venue = Venue.query.get(show.venue_id)
@@ -538,7 +537,8 @@ def show_artist(artist_id):
             }
             past_shows.append(show_data)
 
-        raw_upcoming_shows = shows.filter(Show.start_time >= today).all()
+        raw_upcoming_shows = db.session.query(Show).join(Venue).filter(
+            Show.artist_id == artist_id).filter(Show.start_time > datetime.now()).all()
         upcoming_shows = []
         for show in raw_upcoming_shows:
             venue = Venue.query.get(show.venue_id)
@@ -723,19 +723,21 @@ def edit_artist_submission(artist_id):
             setattr(artist_data, 'state', request.form['state'])
             setattr(artist_data, 'phone', request.form['phone'])
             setattr(artist_data, 'website_link', request.form['website_link'])
-            setattr(artist_data, 'facebook_link', request.form['facebook_link'])
+            setattr(artist_data, 'facebook_link',
+                    request.form['facebook_link'])
             setattr(artist_data, 'image_link', request.form['image_link'])
             setattr(artist_data, 'seeking_description', seeking_description)
             setattr(artist_data, 'seeking_venue', seeking_venue)
-            
+
             return redirect(url_for('show_artist', artist_id=artist_id))
         else:
             print(form.errors)
     return render_template('errors/404.html'), 404
 
+
 @ app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
-    
+
     venue = Venue.query.get(venue_id)
     if not venue:
         # User typed in a URL that doesn't exist, redirect home
@@ -786,32 +788,32 @@ def edit_venue(venue_id):
 def edit_venue_submission(venue_id):
   # TODO: take values from the form submitted, and update existing
   # venue record with ID <venue_id> using the new attributes
-  form = VenueForm(request.form)
-  venue_data = Venue.query.get(venue_id)
-  if venue_data:
-      if form.validate():
-          seeking_talent = False
-          seeking_description = ''
-          if 'seeking_talent' in request.form:
-              seeking_talent = request.form['seeking_talent'] == 'y'
-          if 'seeking_description' in request.form:
-              seeking_description = request.form['seeking_description']
-          setattr(venue_data, 'name', request.form['name'])
-          setattr(venue_data, 'genres', request.form.getlist('genres'))
-          setattr(venue_data, 'address', request.form['address'])
-          setattr(venue_data, 'city', request.form['city'])
-          setattr(venue_data, 'state', request.form['state'])
-          setattr(venue_data, 'phone', request.form['phone'])
+    form = VenueForm(request.form)
+    venue_data = Venue.query.get(venue_id)
+    if venue_data:
+        if form.validate():
+            seeking_talent = False
+            seeking_description = ''
+            if 'seeking_talent' in request.form:
+                seeking_talent = request.form['seeking_talent'] == 'y'
+            if 'seeking_description' in request.form:
+                seeking_description = request.form['seeking_description']
+            setattr(venue_data, 'name', request.form['name'])
+            setattr(venue_data, 'genres', request.form.getlist('genres'))
+            setattr(venue_data, 'address', request.form['address'])
+            setattr(venue_data, 'city', request.form['city'])
+            setattr(venue_data, 'state', request.form['state'])
+            setattr(venue_data, 'phone', request.form['phone'])
         # setattr(venue_data, 'website', request.form['website'])
-          setattr(venue_data, 'facebook_link', request.form['facebook_link'])
-          setattr(venue_data, 'image_link', request.form['image_link'])
-          setattr(venue_data, 'seeking_description', seeking_description)
-          setattr(venue_data, 'seeking_talent', seeking_talent)
-         # Venue.update(venue_data)
-          return redirect(url_for('show_venue', venue_id=venue_id))
-      else:
-          print(form.errors)
-  return render_template('errors/404.html'), 404
+            setattr(venue_data, 'facebook_link', request.form['facebook_link'])
+            setattr(venue_data, 'image_link', request.form['image_link'])
+            setattr(venue_data, 'seeking_description', seeking_description)
+            setattr(venue_data, 'seeking_talent', seeking_talent)
+           # Venue.update(venue_data)
+            return redirect(url_for('show_venue', venue_id=venue_id))
+        else:
+            print(form.errors)
+    return render_template('errors/404.html'), 404
 
 #  Create Artist
 #  ----------------------------------------------------------------
@@ -886,7 +888,7 @@ def create_artist_submission():
 
 @ app.route('/artists/<artist_id>/delete', methods=['GET'])
 def delete_artist(artist_id):
-    
+
     # Deletes a artist based on AJAX call from the artist page
     artist = Artist.query.get(artist_id)
     if not artist:
