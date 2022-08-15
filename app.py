@@ -3,24 +3,24 @@
 #----------------------------------------------------------------------------#
 
 
-import json
-import dis
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for, abort, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, abort, jsonify
 from flask_moment import Moment
-from flask_sqlalchemy import SQLAlchemy
+
 import logging
 from logging import Formatter, FileHandler
-from sqlalchemy import ARRAY, String
+
 from forms import *
-from flask_migrate import Migrate
 import os
 import sys
 from datetime import datetime
-import re
+
 from operator import itemgetter  # for sorting lists of tuples
 import collections
+from models import db_setup, Venue, Show, Artist
+
+
 
 
 #
@@ -31,113 +31,17 @@ collections.Callable = collections.abc.Callable
 
 app = Flask(__name__)
 moment = Moment(app)
-app.config.from_object('config')
-db = SQLAlchemy(app)
+
+db = db_setup(app)
 
 
-# TODO: connect to a local postgresql database
-migrate = Migrate(app, db)
+
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
 
 
-class Genre(db.Model):
-    __tablename__ = 'genres'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
 
-    artist_genre_table = db.Table('artist_genre_table',
-                                  db.Column('genres_id', db.Integer, db.ForeignKey(
-                                      'genres.id'), primary_key=True),
-                                  db.Column('artists_id', db.Integer, db.ForeignKey(
-                                      'artists.id'), primary_key=True)
-                                  )
-
-    venue_genre_table = db.Table('venue_genre_table',
-                                 db.Column('genres_id', db.Integer, db.ForeignKey(
-                                     'genres.id'), primary_key=True),
-                                 db.Column('venues_id', db.Integer, db.ForeignKey(
-                                     'venues.id'), primary_key=True)
-                                 )
-
-
-artist_id = db.Column(db.Integer, db.ForeignKey('artist.id'),
-                      nullable=False)
-
-
-def __repr__(self, name, artists_genre_table, venue_genre_table):
-    self.name = name
-    self.artists_genre_table = artists_genre_table
-    self.venue_genre_table = venue_genre_table
-
-
-class Venue(db.Model):
-    __tablename__ = 'venues'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    address = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-    genres = db.Column(ARRAY(String))
-
-    website_link = db.Column(db.String(120))
-    seeking_talent = db.Column(db.Boolean, default=False)
-    seeking_description = db.Column(db.String(120))
-
-    shows = db.relationship('Show', backref='venue_list', lazy=True)
-
-    def __repr__(self):
-        return f'<Venue {self.id} {self.name}>'
-
-
-class Artist(db.Model):
-    __tablename__ = 'artists'
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String)
-    city = db.Column(db.String(120))
-    state = db.Column(db.String(120))
-    phone = db.Column(db.String(120))
-    # genres = db.Column(db.String(120))
-    genres = db.relationship('Genre', backref='artist', lazy=True)
-    image_link = db.Column(db.String(500))
-    facebook_link = db.Column(db.String(120))
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate
-
-    genres = db.Column(ARRAY(String))
-
-    website_link = db.Column(db.String(120))
-    seeking_venue = db.Column(db.Boolean, default=False)
-    seeking_description = db.Column(db.String(120))
-
-    shows = db.relationship('Show', backref='artist_list', lazy=True)
-
-    def __repr__(self):
-        return f'<Artist: {self.id} {self.name}>'
-
-
-class Show(db.Model):
-    __tablename__ = 'shows'
-
-    id = db.Column(db.Integer, primary_key=True)
-    start_time = db.Column(db.DateTime, nullable=False)
-
-    artist_id = db.Column(db.Integer, db.ForeignKey(
-        'artists.id'), nullable=False)
-    venue_id = db.Column(db.Integer, db.ForeignKey(
-        'venues.id'), nullable=False)
-
-    def __repr__(self):
-        return f'<Show: {self.id} {self.start_time}>'
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
@@ -474,7 +378,7 @@ def create_venue_submission():
                 address=form.address.data,
                 phone=form.phone.data,
                 image_link=form.image_link.data,
-                genres=" ".join(form.genres.data),
+                genres=form.genres.data,
                 facebook_link=form.facebook_link.data,
                 website_link=form.website_link.data,
                 seeking_talent=form.seeking_talent.data,
@@ -801,100 +705,37 @@ def edit_artist(artist_id):
 
 @ app.route('/artists/<int:artist_id>/edit', methods=['POST'])
 def edit_artist_submission(artist_id):
-    # Much of this code from edit_venue_submission()
+  # TODO: take values from the form submitted, and update existing
+  # artist record with ID <artist_id> using the new attributes
     form = ArtistForm(request.form)
-
-    name = form.name.data,
-    city = form.city.data,
-    state = form.state.data,
-    # address = form.address.data.strip()
-    phone = form.phone.data,
-    genres = form.genres.data,
-    seeking_venue = True if form.seeking_venue.data == 'Yes' else False
-    seeking_description = form.seeking_description.data,
-    image_link = form.image_link.data,
-    # website = form.website.data,
-    facebook_link = form.facebook_link.data,
-
-    # Redirect back to form if errors in form validation
-    if not form.validate():
-
-        flash(form.errors)
-        return redirect(url_for('edit_artist_submission', artist_id=artist_id))
-
-    else:
-        error_in_update = False
-
-        # Insert form data into DB
-        try:
-            # First get the existing artist object
-            artist = Artist.query.get(artist_id)
-            # artist = Artist.query.filter_by(id=artist_id).one_or_none()
-
-            # Update fields
-            artist.name = name
-            artist.city = city
-            artist.state = state
-            # artist.address = address
-            artist.phone = phone
-
-            artist.seeking_venue = seeking_venue
-            artist.seeking_description = seeking_description
-            artist.image_link = image_link
-            # artist.website = website
-            artist.facebook_link = facebook_link
-
-            # First we need to clear (delete) all the existing genres off the artist otherwise it just adds them
-
-            # For some reason this didn't work! Probably has to do with flushing/lazy, etc.
-            # for genre in artist.genres:
-            #     artist.genres.remove(genre)
-
-            # artist.genres.clear()  # Either of these work.
-            artist.genres = []
-
-            # genres can't take a list of strings, it needs to be assigned to db objects
-            # genres from the form is like: ['Alternative', 'Classical', 'Country']
-            for genre in genres:
-                # Throws an exception if more than one returned, returns None if none
-                fetch_genre = Genre.query.filter_by(name=genre).one_or_none()
-                if fetch_genre:
-                    # if found a genre, append it to the list
-                    artist.genres.append(fetch_genre)
-
-                else:
-                    # fetch_genre was None. It's not created yet, so create it
-                    new_genre = Genre(name=genre)
-                    db.session.add(new_genre)
-                    # Create a new Genre item and append it
-                    artist.genres.append(new_genre)
-
-            # Attempt to save everything
-            db.session.commit()
-        except Exception as e:
-            error_in_update = True
-            print(f'Exception "{e}" in edit_artist_submission()')
-            db.session.rollback()
-        finally:
-            db.session.close()
-
-        if not error_in_update:
-            # on successful db update, flash success
-            flash('Artist ' + request.form['name'] +
-                  ' was successfully updated!')
+    artist_data = Artist.query.get(artist_id)
+    if artist_data:
+        if form.validate():
+            seeking_venue = False
+            seeking_description = ''
+            if 'seeking_venue' in request.form:
+                seeking_venue = request.form['seeking_venue'] == 'y'
+            if 'seeking_description' in request.form:
+                seeking_description = request.form['seeking_description']
+            setattr(artist_data, 'name', request.form['name'])
+            setattr(artist_data, 'genres', request.form.getlist('genres'))
+            setattr(artist_data, 'city', request.form['city'])
+            setattr(artist_data, 'state', request.form['state'])
+            setattr(artist_data, 'phone', request.form['phone'])
+            setattr(artist_data, 'website_link', request.form['website_link'])
+            setattr(artist_data, 'facebook_link', request.form['facebook_link'])
+            setattr(artist_data, 'image_link', request.form['image_link'])
+            setattr(artist_data, 'seeking_description', seeking_description)
+            setattr(artist_data, 'seeking_venue', seeking_venue)
+            
             return redirect(url_for('show_artist', artist_id=artist_id))
         else:
-            flash('An error occurred. Artist ' +
-                  request.form.get("name") + ' could not be updated.')
-            print("Error in edit_artist_submission()")
-            abort(500)
-
+            print(form.errors)
+    return render_template('errors/404.html'), 404
 
 @ app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
-    # Get the existing venue from the database
-    # venue = Venue.query.filter_by(id=venue_id).one_or_none()    # Returns one, None, or exception if more than one
-    # Returns object based on primary key, or None.  Guessing get is faster than filter_by
+    
     venue = Venue.query.get(venue_id)
     if not venue:
         # User typed in a URL that doesn't exist, redirect home
@@ -917,7 +758,7 @@ def edit_venue(venue_id):
         "state": venue.state,
         # Put the dashes back into phone number
         "phone": (venue.phone[:3] + '-' + venue.phone[3:6] + '-' + venue.phone[6:]),
-        #"website": venue.website,
+        # "website": venue.website,
         "facebook_link": venue.facebook_link,
         "seeking_talent": venue.seeking_talent,
         "seeking_description": venue.seeking_description,
@@ -944,7 +785,7 @@ def edit_venue(venue_id):
 @ app.route('/venues/<int:venue_id>/edit', methods=['POST'])
 def edit_venue_submission(venue_id):
     # Much of this code same as /venue/create view.
-    
+
     form = VenueForm(request.form)
 
     name = form.name.data,
@@ -952,7 +793,7 @@ def edit_venue_submission(venue_id):
     state = form.state.data
     address = form.address.data,
     phone = form.phone.data,
-    genres = " ".join(form.genres.data),
+    genres =form.genres.data,
     seeking_talent = form.seeking_talent.data,
     seeking_description = form.seeking_description.data,
     image_link = form.image_link.data,
@@ -961,7 +802,7 @@ def edit_venue_submission(venue_id):
 
     # Redirect back to form if errors in form validation
     if not form.validate():
-        #flash(form.errors)
+        # flash(form.errors)
         return redirect(url_for('edit_venue_submission', venue_id=venue_id))
 
     else:
@@ -1028,8 +869,9 @@ def edit_venue_submission(venue_id):
                   ' was successfully updated!')
             return redirect(url_for('show_venue', venue_id=venue_id))
         else:
-            flash('An error occurred. Venue ' + request.form.get("name") + ' could not be updated.')
-                 
+            flash('An error occurred. Venue ' +
+                  request.form.get("name") + ' could not be updated.')
+
             print("Error in edit_venue_submission()")
             abort(500)
 
@@ -1067,7 +909,7 @@ def create_artist_submission():
                 state=form.state.data,
                 phone=form.phone.data,
                 image_link=form.image_link.data,
-                genres=" ".join(form.genres.data),
+                genres=form.genres.data,
                 facebook_link=form.facebook_link.data,
                 website_link=form.website_link.data,
                 seeking_venue=form.seeking_venue.data,
@@ -1106,6 +948,7 @@ def create_artist_submission():
 
 @ app.route('/artists/<artist_id>/delete', methods=['GET'])
 def delete_artist(artist_id):
+    
     # Deletes a artist based on AJAX call from the artist page
     artist = Artist.query.get(artist_id)
     if not artist:
