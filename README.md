@@ -35,6 +35,7 @@ The tech stack for this project was:
 ├── README.md
 ├── app.py *** the main driver of the app. Includes your SQLAlchemy models.
                   "python app.py" to run after installing dependences
+├── models.py ***the models file of the app.
 ├── config.py *** Database URLs, CSRF generation, etc
 ├── error.log
 ├── forms.py *** Forms
