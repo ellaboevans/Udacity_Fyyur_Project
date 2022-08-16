@@ -206,7 +206,7 @@ def show_venue(venue_id):
         today = datetime.now()
 
         raw_past_shows = db.session.query(Show).join(Venue).filter(
-            Show.venue_id == venue_id).filter(Show.start_time > datetime.now()).all()
+            Show.venue_id == venue_id).filter(Show.start_time < datetime.now()).all()
         past_shows = []
 
         for show in raw_past_shows:
@@ -390,6 +390,7 @@ def create_venue_submission():
             db.session.commit()
         else:
             error = True
+            flash('Venue ' + request.form['name'] + ' Could not be updated!')
 
     except Exception as e:
         print(str(e))
@@ -522,7 +523,7 @@ def show_artist(artist_id):
 
         shows = Show.query.filter_by(artist_id=artist_id)
 
-        today = datetime.now()
+       # today = datetime.now()
 
         raw_past_shows = db.session.query(Show).join(Venue).filter(
             Show.artist_id == artist_id).filter(Show.start_time < datetime.now()).all()
@@ -863,7 +864,7 @@ def create_artist_submission():
             db.session.commit()
         else:
             error = True
-
+            flash('Artist ' + request.form['name'] + ' Could not be updated!')
     except Exception as e:
         print(str(e))
         # we then have to rollback the change when encounter issue
@@ -939,7 +940,7 @@ def shows():
             each_show_data = {
                 "venue_id": venue_id,
                 "venue_name": Venue.query.get(venue_id).name,
-                "artist_id": Artist.query.get(artist_id).name,
+                "artist_id": artist_id,
                 "artist_name": artist.name,
                 "artist_image_link": artist.image_link,
                 "start_time": str(show.start_time),
