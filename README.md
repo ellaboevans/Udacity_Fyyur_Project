@@ -15,6 +15,10 @@ This app was nearly complete. It was only missing one thing … real data! While
 - searching for venues and artists.
 - learning more about a specific artist or venue.
 
+## Live Server
+
+Visit the site using: 
+
 ### Tech Stack
 
 The tech stack for this project was:
@@ -88,4 +92,4 @@ $ export FLASK_ENV=development # enables debug mode
 $ python3 app.py
 ```
 
-4. Navigate to Home page [http://localhost:5000](http://localhost:5000)
+4. Navigate to Home page [http://127.0.0.1:5000/](http://127.0.0.1:5000/)
